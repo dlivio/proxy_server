@@ -106,6 +106,45 @@ app.use('/camera/1', (req, res, next) => {
 
 });
 
+app.use('/camera/:ip', (req, res, next) => {
+
+    urllib.request("http://" + req.params.ip + STREAM_URL, {
+        digestAuth: DIGEST_AUTH,
+        streaming: true,
+    }, function (err, _, res2) {
+        // Catch connection errors (connection timeouts due to the camera being offline)
+        if (err) {
+            console.log(err.stack);
+            res.writeHead(504); // Gateway Timeout
+            res.end();
+            return;
+        }
+
+        // Initialize the headers needed for the MJPG stream
+        res.setHeader('Content-Type', 'multipart/x-mixed-replace;boundary=myboundary');
+        res.setHeader('Connection', 'close');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Cache-Control', 'no-cache, private');
+        res.setHeader('Expires', 0);
+        res.setHeader('Max-Age', 0);
+
+        // Write the chunks of data that arrive to the response
+        res2.on('data', function (chunk) {
+            res.write(chunk);
+        });
+        // Close the response when the stream finishes or the client closes it
+        res2.on('end', function () {
+            res.writeHead(res2.statusCode);
+            res.end();
+            next();
+        });
+        res2.on('close', function () {
+            res.end();
+            next();
+        })
+    });
+
+});
 
 app.use('/move/:command/:direction', (req, res, next) => {
 
