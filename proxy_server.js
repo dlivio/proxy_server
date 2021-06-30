@@ -44,7 +44,7 @@ app.use(morgan('dev'));
 
 /**
  * TODO:
- * - Fetch url's from database related to the asking user
+ * - Add method to move camera that receives target IP
  * - Improve performance with expressjs guidelines
  *
  */
