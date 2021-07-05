@@ -45,6 +45,8 @@ app.use(morgan('dev'));
 /**
  * TODO:
  * - Add method to move camera that receives target IP
+ * - Change IPCameras table in User Doctype to choose predefined IPCameras
+ * - Make Desk app to see all IPCameras
  * - Improve performance with expressjs guidelines
  *
  */
