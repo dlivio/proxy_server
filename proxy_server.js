@@ -7,7 +7,7 @@ const app = express();
 
 /* Configuration */
 const PORT = 3000;
-const HOST = '0.0.0.0';
+const HOST = "localhost";
 const API_SERVICE_URL = "https://jsonplaceholder.typicode.com";
 
 // Camera ip and port
@@ -44,11 +44,9 @@ app.use(morgan('dev'));
 
 /**
  * TODO:
- * - Add method to move camera that receives target IP
- * - Change IPCameras table in User Doctype to choose predefined IPCameras
- * - Make Desk app to see all IPCameras
+ * - Fetch url's from database related to the asking user
  * - Improve performance with expressjs guidelines
- *
+ * 
  */
 
 /* Info GET endpoint */
@@ -56,21 +54,15 @@ app.get('/info', (req, res, next) => {
     res.send('This is a proxy service which proxies to Dahua IP Camera APIs.');
 });
 
-/* Authorization */
-/*
-app.use('', (req, res, next) => {
-   if (req.headers.authorization) {
-       next();
-   } else {
-       res.sendStatus(403);
-   }
-});
-*/
 
 /* Proxy endpoints */
-app.use('/camera/1', (req, res, next) => {
+app.use('/camera/:cameraIP', (req, res, next) => {
 
-    urllib.request(BASE_URL + STREAM_URL, {
+    // get the correct camera IP
+    var ip = req.params.cameraIP.toString();
+    ip = ip.replace(/_/g, "/");
+
+    urllib.request(ip + STREAM_URL, {
         digestAuth: DIGEST_AUTH,
         streaming: true,
     }, function (err, _, res2) {
@@ -108,47 +100,12 @@ app.use('/camera/1', (req, res, next) => {
 
 });
 
-app.use('/camera/:ip', (req, res, next) => {
 
-    urllib.request("http://" + req.params.ip + STREAM_URL, {
-        digestAuth: DIGEST_AUTH,
-        streaming: true,
-    }, function (err, _, res2) {
-        // Catch connection errors (connection timeouts due to the camera being offline)
-        if (err) {
-            console.log(err.stack);
-            res.writeHead(504); // Gateway Timeout
-            res.end();
-            return;
-        }
+app.use('/:cameraIP/move/:command/:direction', (req, res, next) => { 
 
-        // Initialize the headers needed for the MJPG stream
-        res.setHeader('Content-Type', 'multipart/x-mixed-replace;boundary=myboundary');
-        res.setHeader('Connection', 'close');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Cache-Control', 'no-cache, private');
-        res.setHeader('Expires', 0);
-        res.setHeader('Max-Age', 0);
-
-        // Write the chunks of data that arrive to the response
-        res2.on('data', function (chunk) {
-            res.write(chunk);
-        });
-        // Close the response when the stream finishes or the client closes it
-        res2.on('end', function () {
-            res.writeHead(res2.statusCode);
-            res.end();
-            next();
-        });
-        res2.on('close', function () {
-            res.end();
-            next();
-        })
-    });
-
-});
-
-app.use('/move/:command/:direction', (req, res, next) => {
+    // get the correct camera IP
+    var ip = req.params.cameraIP.toString();
+    ip = ip.replace(/_/g, "/");
 
     // Interpret the command (start/stop)
     var commandCode;
@@ -165,7 +122,7 @@ app.use('/move/:command/:direction', (req, res, next) => {
             res.writeHead(404); // Not Found
             res.end();
             return;
-    }
+    } 
 
     console.log("Command chosen: " + commandCode);
 
@@ -207,11 +164,11 @@ app.use('/move/:command/:direction', (req, res, next) => {
             res.writeHead(404); // Not Found
             res.end();
             return;
-    }
+    } 
 
     console.log("Code chosen: " + directionCode);
 
-    urllib.request(BASE_URL + CAMERA_CONTROL_URL_PRE_PART_1 + commandCode + CAMERA_CONTROL_URL_PRE_PART_2 + directionCode + movement_url_post, {
+    urllib.request(ip + CAMERA_CONTROL_URL_PRE_PART_1 + commandCode + CAMERA_CONTROL_URL_PRE_PART_2 + directionCode + movement_url_post, {
         digestAuth: DIGEST_AUTH
     }, function (err, _, res2) {
         // Catch connection errors (connection timeouts due to the camera being offline)
@@ -230,7 +187,11 @@ app.use('/move/:command/:direction', (req, res, next) => {
 
 });
 
-app.use('/zoom/:command/:direction', (req, res, next) => {
+app.use('/:cameraIP/zoom/:command/:direction', (req, res, next) => { 
+
+    // get the correct camera IP
+    var ip = req.params.cameraIP.toString();
+    ip = ip.replace(/_/g, "/");
 
     // Interpret the command (start/stop)
     var commandCode;
@@ -252,7 +213,7 @@ app.use('/zoom/:command/:direction', (req, res, next) => {
     console.log("Command chosen: " + commandCode);
 
     // Interpret direction requested
-    var directionCode;
+    var directionCode; 
 
     switch(req.params.direction) {
         case "in":
@@ -270,7 +231,7 @@ app.use('/zoom/:command/:direction', (req, res, next) => {
 
     console.log("Code chosen: " + directionCode);
 
-    urllib.request(BASE_URL + CAMERA_CONTROL_URL_PRE_PART_1 + commandCode + CAMERA_CONTROL_URL_PRE_PART_2 + directionCode + ZOOM_URL_POST, {
+    urllib.request(ip + CAMERA_CONTROL_URL_PRE_PART_1 + commandCode + CAMERA_CONTROL_URL_PRE_PART_2 + directionCode + ZOOM_URL_POST, {
         digestAuth: DIGEST_AUTH
     }, function (err, _, res2) {
          // Catch connection errors (connection timeouts due to the camera being offline)
